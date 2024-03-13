@@ -1,0 +1,43 @@
+import argparse
+
+from os import listdir
+from os.path import isfile, join, basename
+
+parser = argparse.ArgumentParser(
+                    prog='Test runner',
+                    description='Runs the script against the test cases')
+parser.add_argument('-tc', '--test_cases_folder')
+
+# Code goes here
+@@@@@@CODE@@@@@@
+
+def print_formatted_output(test_case_no, output):
+    print(f'Test case: {test_case_no}\nOutput: {output}\n||||>>>>>>>>>>>||||')
+
+def get_test_case_no(file):
+    filename = basename(file)
+
+    filename_segments = filename.split('.')
+    return filename_segments[0] if len(filename_segments) == 2 else filename
+
+if __name__ == "__main__":
+    args = parser.parse_args()
+    test_cases_folder = args.test_cases_folder
+
+    files = [join(test_cases_folder, f) for f in listdir(test_cases_folder) if isfile(join(test_cases_folder, f))]
+
+    outputs = {}
+    for file in files:
+        # it is expected that code has a Solution class with a mandatory method - run
+        # make a context-less call, every time create a new instance
+        sol = Solution()
+
+        with open(file, 'r') as fdata:
+            program_args = fdata.read().split()
+            output = sol.run(*program_args)
+            print_formatted_output(get_test_case_no(file), output)
+
+# Output format
+# Test case #{no}
+# Output:
+# ||||>>>>>>>>>>>||||

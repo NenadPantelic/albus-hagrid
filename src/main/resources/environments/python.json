@@ -1,0 +1,23 @@
+{
+  "commandTemplate": "python @@{{EXEC_CODE_FILE}}@@ --test_cases_folder=@@{{EXEC_TEST_CASES}}@@",
+  "environmentVariables": [
+    "CODE_FILE",
+    "TEST_CASES"
+  ],
+  "executionVariableArgs": [
+    "EXEC_CODE_FILE",
+    "EXEC_TEST_CASES"
+  ],
+  "environmentVariableRules": {
+  },
+  "executionVariableRules": {
+    "EXEC_CODE_FILE": "environmentVariables.CODE_FILE",
+    "EXEC_TEST_CASES": "environmentVariables.TEST_CASES"
+  },
+  "initFilesContainerLocation": null,
+  "executionFilesLocation": "/home/",
+  "image": "python:3.8",
+  "environmentType": "REUSABLE",
+  "extension": "py",
+  "hasTestCases": true
+}

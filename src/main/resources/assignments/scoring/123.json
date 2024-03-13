@@ -1,0 +1,12 @@
+{
+  "assignmentId": "529b1107-c8c5-4b26-8772-e0daae6fc844",
+  "scoringPolicy": "BINARY",
+  "maxScore": 5.0,
+  "linesToSkip": [
+    "1",
+    "n"
+  ],
+  "solutions": {
+    "1": "  id  |   name    | grade \n------+-----------+-------\n 1510 | Jordan    |     1\n 1689 | Gabriel   |     1\n 1381 | Tiffany   |     1\n 1709 | Cassandra |     1\n 1101 | Haley     |     2\n 1782 | Andrew    |     2\n 1468 | Kris      |     2\n 1641 | Brittany  |     2\n 1247 | Alexis    |     3\n 1316 | Austin    |     3\n 1911 | Gabriel   |     3\n 1501 | Jessica   |     3\n 1304 | Jordan    |     4\n 1025 | John      |     4\n 1934 | Kyle      |     4\n 1661 | Logan     |     4"
+  }
+}

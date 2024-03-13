@@ -1,0 +1,33 @@
+{
+  "commandTemplate": "psql -U @@{{EXEC_DB_USER}}@@ -d @@{{EXEC_DB_NAME}}@@ -p @@{{EXEC_DB_PORT}}@@ -a -f @@{{EXEC_CODE_FILE}}@@ ",
+  "environmentVariables": [
+    "POSTGRES_USER",
+    "POSTGRES_PASSWORD",
+    "POSTGRES_DB",
+    "POSTGRES_PORT",
+    "CODE_FILE"
+  ],
+  "executionVariableArgs": [
+    "EXEC_DB_USER",
+    "EXEC_DB_NAME",
+    "EXEC_DB_PORT",
+    "EXEC_CODE_FILE"
+  ],
+  "environmentVariableRules": {
+    "POSTGRES_USER": "__RULE<<UUID()>>__",
+    "POSTGRES_PASSWORD": "__RULE<<RANDOM(12)>>__",
+    "POSTGRES_DB": "__RULE<<RANDOM(6)>>__",
+    "POSTGRES_PORT": "__RULE<<CONST(5432)>>__"
+  },
+  "executionVariableRules": {
+    "EXEC_DB_USER": "environmentVariables.POSTGRES_USER",
+    "EXEC_DB_NAME": "environmentVariables.POSTGRES_DB",
+    "EXEC_DB_PORT": "environmentVariables.POSTGRES_PORT",
+    "EXEC_CODE_FILE": "environmentVariables.CODE_FILE"
+  },
+  "initFilesContainerLocation": "/docker-entrypoint-initdb.d",
+  "executionFilesLocation": "/home/",
+  "image": "postgres:13.0",
+  "environmentType": "SINGLE_USE",
+  "extension": "sql"
+}

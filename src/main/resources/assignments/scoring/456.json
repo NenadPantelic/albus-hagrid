@@ -1,0 +1,11 @@
+{
+  "assignmentId": "529b1107-c8c5-4b26-8772-e0daae6fc844",
+  "scoringPolicy": "BINARY",
+  "maxScore": 5.0,
+  "linesToSkip": [
+  ],
+  "solutions": {
+    "1": "(1,4)",
+    "2": "(1,9)"
+  }
+}
