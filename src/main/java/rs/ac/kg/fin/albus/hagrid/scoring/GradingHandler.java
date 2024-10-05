@@ -1,11 +1,20 @@
 package rs.ac.kg.fin.albus.hagrid.scoring;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Service;
 import rs.ac.kg.fin.albus.hagrid.data.container.CodeExecutionResult;
 import rs.ac.kg.fin.albus.hagrid.data.scoring.GradingResult;
 import rs.ac.kg.fin.albus.hagrid.data.scoring.SubmissionGradingResult;
+import rs.ac.kg.fin.albus.hagrid.event.config.KafkaConfig;
+import rs.ac.kg.fin.albus.hagrid.event.data.CodeSubmission;
 import rs.ac.kg.fin.albus.hagrid.executor.CodeExecutor;
+
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Service
@@ -14,35 +23,35 @@ public class GradingHandler {
     private final CodeExecutor codeExecutor;
     private final Grader grader;
 
-    public GradingHandler(CodeExecutor codeExecutor, Grader grader) {
+    private final KafkaTemplate<String, SubmissionGradingResult> kafkaTemplate;
+
+    public final String producerTopic;
+
+    public GradingHandler(CodeExecutor codeExecutor,
+                          Grader grader,
+                          KafkaTemplate<String, SubmissionGradingResult> kafkaTemplate,
+                          KafkaConfig kafkaConfig) {
         this.codeExecutor = codeExecutor;
         this.grader = grader;
+        this.kafkaTemplate = kafkaTemplate;
+        this.producerTopic = kafkaConfig.producerTopic();
     }
 
-    public void executeAndGrade() {
-        // TODO: get data from Kafka
-        // Postgres
-          String assignmentId = "123";
-          String submissionId = "subm-123";
-          String userId = "user-123";
-          String environment = "postgres";
-          String code = "select * from Highschooler";
-
-        // Python
-        // String assignmentId = "456";
-        // String submissionId = "subm-456";
-        // String userId = "user-456";
-        // String environment = "python";
-//        String code = """
-//                class Solution:
-//                    def run(self, a, b):
-//                        return a, b
-//                """;
-
-        CodeExecutionResult codeExecutionResult = codeExecutor.execute(
-                submissionId, assignmentId, environment, code
+    @KafkaListener(topics = {"code-submission-events"}, groupId = "code-submission-events-listener-group")
+    public void handleCodeSubmission(ConsumerRecord<String, CodeSubmission> consumerRecord) {
+        String submissionId = consumerRecord.key();
+        CodeSubmission codeSubmission = consumerRecord.value();
+        log.info(
+                "Consuming code submission[submissionId = {}, userId = {}, assignmentId = {}, environment = {}]",
+                submissionId, codeSubmission.userId(), codeSubmission.assignmentId(), codeSubmission.environment()
         );
 
+        String assignmentId = codeSubmission.assignmentId();
+        String userId = codeSubmission.userId();
+        String environment = codeSubmission.environment();
+        String code = codeSubmission.code();
+
+        CodeExecutionResult codeExecutionResult = codeExecutor.execute(submissionId, assignmentId, environment, code);
         SubmissionGradingResult submissionGradingResult;
 
         if (codeExecutionResult.hasError()) {
@@ -55,7 +64,45 @@ public class GradingHandler {
         } else {
             submissionGradingResult = grader.grade(submissionId, assignmentId, userId, codeExecutionResult.output());
         }
-        System.out.println(submissionGradingResult);
-        // send to kafka
+
+        log.info("Submission grading result: {}", submissionGradingResult);
+        try {
+            sendSubmissionGradingResult(submissionGradingResult);
+        } catch (Exception e) {
+            log.error("Unable to send the submission grading result {} due to {}.", submissionGradingResult, e.getMessage(), e);
+        }
+
+    }
+
+    private void sendSubmissionGradingResult(SubmissionGradingResult submissionGradingResult) throws JsonProcessingException {
+        String key = submissionGradingResult.submissionId();
+        CompletableFuture<SendResult<String, SubmissionGradingResult>> completableFuture = kafkaTemplate.send(
+                producerTopic, key, submissionGradingResult
+        );
+
+        completableFuture.whenComplete((sendResult, throwable) -> {
+            if (throwable != null) {
+                handleFailure(key, submissionGradingResult, throwable);
+            } else {
+                handleSuccess(key, submissionGradingResult, sendResult);
+            }
+        });
+    }
+
+    private void handleSuccess(String key,
+                               SubmissionGradingResult submissionGradingResult,
+                               SendResult<String, SubmissionGradingResult> sendResult) {
+        log.info(
+                "Message sent successfully for: key = {}, value = {}, partition = {}",
+                key, submissionGradingResult, sendResult.getRecordMetadata().partition()
+        );
+    }
+
+    private void handleFailure(String key, SubmissionGradingResult submissionGradingResult, Throwable throwable) {
+        log.error(
+                "An error occurred when sending the message {}/{} due to {}",
+                key, submissionGradingResult, throwable.getMessage(), throwable
+        );
+
     }
 }
