@@ -1,6 +1,7 @@
 package rs.ac.kg.fin.albus.hagrid.scoring;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -20,16 +21,17 @@ import java.util.concurrent.CompletableFuture;
 @Service
 public class GradingHandler {
 
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private final CodeExecutor codeExecutor;
     private final Grader grader;
 
-    private final KafkaTemplate<String, SubmissionGradingResult> kafkaTemplate;
+    private final KafkaTemplate<String, String> kafkaTemplate;
 
     public final String producerTopic;
 
     public GradingHandler(CodeExecutor codeExecutor,
                           Grader grader,
-                          KafkaTemplate<String, SubmissionGradingResult> kafkaTemplate,
+                          KafkaTemplate<String, String> kafkaTemplate,
                           KafkaConfig kafkaConfig) {
         this.codeExecutor = codeExecutor;
         this.grader = grader;
@@ -38,9 +40,9 @@ public class GradingHandler {
     }
 
     @KafkaListener(topics = {"code-submission-events"}, groupId = "code-submission-events-listener-group")
-    public void handleCodeSubmission(ConsumerRecord<String, CodeSubmission> consumerRecord) {
+    public void handleCodeSubmission(ConsumerRecord<String, String> consumerRecord) {
         String submissionId = consumerRecord.key();
-        CodeSubmission codeSubmission = consumerRecord.value();
+        CodeSubmission codeSubmission = deserializeCodeSubmissionPayload(consumerRecord.value());
         log.info(
                 "Consuming code submission[submissionId = {}, userId = {}, assignmentId = {}, environment = {}]",
                 submissionId, codeSubmission.userId(), codeSubmission.assignmentId(), codeSubmission.environment()
@@ -76,8 +78,9 @@ public class GradingHandler {
 
     private void sendSubmissionGradingResult(SubmissionGradingResult submissionGradingResult) throws JsonProcessingException {
         String key = submissionGradingResult.submissionId();
-        CompletableFuture<SendResult<String, SubmissionGradingResult>> completableFuture = kafkaTemplate.send(
-                producerTopic, key, submissionGradingResult
+        String eventPayload = serializeSubmissionGradingResult(submissionGradingResult);
+        CompletableFuture<SendResult<String, String>> completableFuture = kafkaTemplate.send(
+                producerTopic, key, eventPayload
         );
 
         completableFuture.whenComplete((sendResult, throwable) -> {
@@ -91,7 +94,7 @@ public class GradingHandler {
 
     private void handleSuccess(String key,
                                SubmissionGradingResult submissionGradingResult,
-                               SendResult<String, SubmissionGradingResult> sendResult) {
+                               SendResult<String, String> sendResult) {
         log.info(
                 "Message sent successfully for: key = {}, value = {}, partition = {}",
                 key, submissionGradingResult, sendResult.getRecordMetadata().partition()
@@ -104,5 +107,22 @@ public class GradingHandler {
                 key, submissionGradingResult, throwable.getMessage(), throwable
         );
 
+    }
+
+    private CodeSubmission deserializeCodeSubmissionPayload(String payload) {
+        try {
+            return OBJECT_MAPPER.readValue(payload, CodeSubmission.class);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private String serializeSubmissionGradingResult(SubmissionGradingResult submissionGradingResult) {
+        try {
+            return OBJECT_MAPPER.writeValueAsString(submissionGradingResult);
+        } catch (JsonProcessingException e) {
+            log.error("Unable to serialize the submission grading result {} due to {}", submissionGradingResult, e.getMessage(), e);
+            throw new RuntimeException(e);
+        }
     }
 }

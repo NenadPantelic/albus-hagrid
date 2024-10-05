@@ -21,20 +21,20 @@ public class HagridApplication {
         SpringApplication.run(HagridApplication.class, args);
     }
 
-    @Autowired
-    private GradingHandler gradingHandler;
-
-    @Bean
-    CommandLineRunner runner() {
-        return args -> {
-            //            Map<String, String> map = Map.of(
-            //                    "MYSQL_USER", "albus",
-            //                    "MYSQL_PASSWORD", "pass123",
-            //                    "MYSQL_DATABASE", "test123"
-            //            );
-            // mysql -h 0.0.0.0 -u albus -p pass123 -P 3306 -D test123 < source /home/subm-1.sql
-            gradingHandler.executeAndGrade();
-        };
-
-    }
+//    @Autowired
+//    private GradingHandler gradingHandler;
+//
+//    @Bean
+//    CommandLineRunner runner() {
+//        return args -> {
+//            //            Map<String, String> map = Map.of(
+//            //                    "MYSQL_USER", "albus",
+//            //                    "MYSQL_PASSWORD", "pass123",
+//            //                    "MYSQL_DATABASE", "test123"
+//            //            );
+//            // mysql -h 0.0.0.0 -u albus -p pass123 -P 3306 -D test123 < source /home/subm-1.sql
+//            gradingHandler.executeAndGrade();
+//        };
+//
+//    }
 }
